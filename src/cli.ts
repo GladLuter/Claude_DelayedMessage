@@ -24,6 +24,11 @@ function fail(msg: string): never {
 function readMessage(opts: { message?: string; messageFile?: string }): string {
   if (opts.message) return opts.message;
   if (opts.messageFile) return fs.readFileSync(opts.messageFile, "utf8").trim();
+  // Без -m/--message-file читаем stdin; но на интерактивном TTY (нет пайпа)
+  // readFileSync(0) завис бы навсегда — сразу подсказываем.
+  if (process.stdin.isTTY) {
+    fail("нет текста сообщения: укажите -m <текст> или --message-file <путь>");
+  }
   try {
     const stdin = fs.readFileSync(0, "utf8").trim();
     if (stdin) return stdin;
@@ -48,7 +53,7 @@ program
   .option("-m, --message <text>", "текст сообщения")
   .option("-f, --message-file <path>", "файл с текстом сообщения")
   .option("--at <time>", 'время доставки: "09:00", "завтра 9:00", "tomorrow 9am", ISO')
-  .option("--session <id>", "ID сессии или auto", "auto")
+  .option("--session <id>", "ID сессии или auto (auto = свежайшая сессия проекта; при нескольких активных сессиях укажите ID явно)", "auto")
   .option("--project <dir>", "папка проекта", process.cwd())
   .action((opts) => {
     const projectDir = path.resolve(opts.project);
@@ -158,6 +163,7 @@ program
   .description("Диагностика")
   .action(() => {
     const items = listItems();
+    const cfg = loadConfig();
     let lastTick = "никогда";
     try {
       lastTick = fs.readFileSync(lastTickFile(), "utf8").trim();
@@ -166,8 +172,9 @@ program
     }
     console.log(`Планировщик: ${schedulerInstalled() ? "зарегистрирован" : "НЕ зарегистрирован"}`);
     console.log(`CLI тика: ${cliEntryPath()}`);
+    console.log(`claude: ${cfg.claudePath}`);
     console.log(`Последний тик: ${lastTick}`);
     console.log(`Очередь: ${pending(items).length} pending / ${items.length} всего`);
   });
 
-program.parseAsync(process.argv);
+program.parseAsync(process.argv).catch((e) => fail(String(e instanceof Error ? e.message : e)));
