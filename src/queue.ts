@@ -10,7 +10,10 @@ export function itemPath(id: string): string {
 
 export function writeItem(item: QueueItem): void {
   ensureDirs();
-  fs.writeFileSync(itemPath(item.id), JSON.stringify(item, null, 2));
+  const target = itemPath(item.id);
+  const tmp = `${target}.tmp-${process.pid}`;
+  fs.writeFileSync(tmp, JSON.stringify(item, null, 2));
+  fs.renameSync(tmp, target);
 }
 
 export function addItem(input: {
@@ -42,7 +45,7 @@ export function listItems(): QueueItem[] {
       }
       items.push(parsed);
     } catch {
-      fs.renameSync(full, path.join(quarantineDir(), `${Date.now()}-${f}`));
+      fs.renameSync(full, path.join(quarantineDir(), `${Date.now()}-${crypto.randomUUID().slice(0, 4)}-${f}`));
     }
   }
   return items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
