@@ -44,6 +44,15 @@ describe("queue", () => {
     expect(fs.existsSync(path.join(queueDir(), "bad.json"))).toBe(false);
   });
 
+  it("уводит валидный JSON без обязательных полей в quarantine", () => {
+    addItem(input);
+    fs.writeFileSync(path.join(queueDir(), "no-schema.json"), JSON.stringify({ foo: 1 }));
+    const items = listItems();
+    expect(items).toHaveLength(1);
+    expect(fs.readdirSync(quarantineDir())).toHaveLength(1);
+    expect(fs.existsSync(path.join(queueDir(), "no-schema.json"))).toBe(false);
+  });
+
   it("pending() отфильтровывает canceled/sent", () => {
     const a = addItem(input);
     a.status = "canceled";
