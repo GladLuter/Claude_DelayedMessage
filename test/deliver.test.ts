@@ -57,6 +57,7 @@ describe("deliverItem", () => {
     cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: "should not run" }), notifications: false };
     expect(await deliverItem(bad, cfg)).toBe("error");
     expect(getItem(bad.id)?.status).toBe("failed");
+    expect(fakeCalls(dir)).toHaveLength(0); // claude не должен запускаться при инъекции
   });
 });
 
