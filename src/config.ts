@@ -12,11 +12,20 @@ export const DEFAULT_CONFIG: Config = {
 
 export function loadConfig(): Config {
   ensureDirs();
+  let raw: string | undefined;
   try {
-    const raw = JSON.parse(fs.readFileSync(configFile(), "utf8")) as Partial<Config>;
-    return { ...DEFAULT_CONFIG, ...raw };
+    raw = fs.readFileSync(configFile(), "utf8");
   } catch {
-    fs.writeFileSync(configFile(), JSON.stringify(DEFAULT_CONFIG, null, 2));
-    return { ...DEFAULT_CONFIG };
+    raw = undefined; // первый запуск
   }
+  if (raw !== undefined) {
+    try {
+      return { ...DEFAULT_CONFIG, ...(JSON.parse(raw) as Partial<Config>) };
+    } catch {
+      // Битый конфиг — сохраняем улику, не теряем правки пользователя молча.
+      fs.renameSync(configFile(), `${configFile()}.bad-${Date.now()}`);
+    }
+  }
+  fs.writeFileSync(configFile(), JSON.stringify(DEFAULT_CONFIG, null, 2));
+  return { ...DEFAULT_CONFIG };
 }

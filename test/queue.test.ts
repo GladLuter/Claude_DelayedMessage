@@ -60,6 +60,13 @@ describe("queue", () => {
     addItem({ ...input, message: "live" });
     expect(pending().map((i) => i.message)).toEqual(["live"]);
   });
+
+  it("writeItem не оставляет tmp-файлов", () => {
+    const item = addItem(input);
+    writeItem(item);
+    const leftovers = fs.readdirSync(queueDir()).filter((f) => f.includes(".tmp-"));
+    expect(leftovers).toEqual([]);
+  });
 });
 
 describe("config", () => {
@@ -71,6 +78,14 @@ describe("config", () => {
     fs.writeFileSync(path.join(dir, "config.json"), JSON.stringify({ tickIntervalMinutes: 5 }));
     expect(loadConfig().tickIntervalMinutes).toBe(5);
     expect(loadConfig().claudePath).toBe("claude");
+  });
+
+  it("битый config.json бэкапится, возвращаются дефолты", () => {
+    fs.writeFileSync(path.join(dir, "config.json"), "{broken");
+    const cfg = loadConfig();
+    expect(cfg.tickIntervalMinutes).toBe(10);
+    const bad = fs.readdirSync(dir).filter((f) => f.startsWith("config.json.bad-"));
+    expect(bad).toHaveLength(1);
   });
 });
 
