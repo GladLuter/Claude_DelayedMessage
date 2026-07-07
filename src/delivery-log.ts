@@ -13,6 +13,7 @@ export function appendLog(entry: Record<string, unknown>): void {
   const file = logFile();
   try {
     if (fs.existsSync(file) && fs.statSync(file).size > MAX_BYTES) {
+      fs.rmSync(`${file}.1`, { force: true });
       fs.renameSync(file, `${file}.1`);
     }
   } catch {
