@@ -52,7 +52,8 @@ export function install(intervalMinutes: number, nodePath: string, cliPath: stri
     return;
   }
   const current = spawnSync("crontab", ["-l"], { encoding: "utf8" }).stdout || "";
-  const kept = current.split("\n").filter((l) => l.trim() && !l.includes(CRON_MARKER));
+  const kept = current.split("\n").filter((l) => !l.includes(CRON_MARKER));
+  while (kept.length && kept[kept.length - 1].trim() === "") kept.pop();
   kept.push(buildCronLine(intervalMinutes, nodePath, cliPath));
   const r = spawnSync("crontab", ["-"], { input: `${kept.join("\n")}\n`, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`crontab update failed: ${r.stderr}`);
@@ -72,7 +73,8 @@ export function uninstall(): void {
     return;
   }
   const current = spawnSync("crontab", ["-l"], { encoding: "utf8" }).stdout || "";
-  const kept = current.split("\n").filter((l) => l.trim() && !l.includes(CRON_MARKER));
+  const kept = current.split("\n").filter((l) => !l.includes(CRON_MARKER));
+  while (kept.length && kept[kept.length - 1].trim() === "") kept.pop();
   spawnSync("crontab", ["-"], { input: kept.length ? `${kept.join("\n")}\n` : "", encoding: "utf8" });
 }
 
