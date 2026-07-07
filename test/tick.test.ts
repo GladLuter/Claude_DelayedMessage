@@ -103,4 +103,20 @@ describe("runOnce", () => {
     expect(fs.existsSync(lockFile())).toBe(true); // чужой lock не снят
     releaseLock();
   });
+
+  it("исключение в доставке одного элемента не блокирует остальные", async () => {
+    add({ message: "boom" });
+    add({ message: "ok" });
+    const probe = vi.fn(async () => ({ kind: "available" as const }));
+    const delivered: string[] = [];
+    const deliver = vi.fn(async (i: QueueItem) => {
+      if (i.message === "boom") throw new Error("disk full");
+      delivered.push(i.message);
+      i.status = "sent";
+      writeItem(i);
+      return "sent" as const;
+    });
+    await runOnce(cfg, { probe, deliver });
+    expect(delivered).toContain("ok");
+  });
 });
