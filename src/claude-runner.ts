@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
 export interface RunResult {
   exitCode: number;
@@ -12,6 +12,15 @@ export interface RunOptions {
   input?: string;
   timeoutMs?: number;
   claudePath?: string;
+}
+
+/** win32: taskkill /t валит всё дерево (cmd-шим + node); иначе достаточно kill. */
+function killTree(child: ChildProcess): void {
+  if (process.platform === "win32" && child.pid) {
+    spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { windowsHide: true });
+  } else {
+    child.kill();
+  }
 }
 
 /**
@@ -35,7 +44,7 @@ export function runClaude(args: string[], opts: RunOptions = {}): Promise<RunRes
     const timer = opts.timeoutMs
       ? setTimeout(() => {
           timedOut = true;
-          child.kill();
+          killTree(child);
         }, opts.timeoutMs)
       : undefined;
     child.stdout.on("data", (d) => (stdout += String(d)));
@@ -47,6 +56,9 @@ export function runClaude(args: string[], opts: RunOptions = {}): Promise<RunRes
     child.on("close", (code) => {
       if (timer) clearTimeout(timer);
       resolve({ exitCode: code ?? -1, stdout, stderr, timedOut });
+    });
+    child.stdin.on("error", () => {
+      /* процесс умер до/во время записи — итог определят события error/close */
     });
     if (opts.input !== undefined) child.stdin.write(opts.input);
     child.stdin.end();
