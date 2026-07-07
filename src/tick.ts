@@ -19,17 +19,22 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
   fs.writeFileSync(lastTickFile(), new Date().toISOString());
   if (!acquireLock(cfg.tickIntervalMinutes * 60_000 * 2)) return;
   try {
-    let items = pending();
+    const items = pending();
     if (items.length === 0) return; // зонд при пустой очереди запрещён (спека §5.3)
 
     const now = new Date();
     for (const item of items.filter((i) => i.trigger.type === "at" && new Date(i.trigger.at!) <= now)) {
-      const outcome = await deps.deliver(item, cfg);
-      if (outcome === "limited") {
-        item.trigger = { type: "limits-reset" };
-        item.fallbackFromAt = true;
-        writeItem(item);
-        notify(cfg, "DelayedMessage", `Лимиты заняты — ${item.id} уйдёт после сброса`);
+      try {
+        const outcome = await deps.deliver(item, cfg);
+        if (outcome === "limited") {
+          item.trigger = { type: "limits-reset" };
+          item.fallbackFromAt = true;
+          writeItem(item);
+          notify(cfg, "DelayedMessage", `Лимиты заняты — ${item.id} уйдёт после сброса`);
+        }
+      } catch (err) {
+        // Сбой одного элемента не должен блокировать остальные; следующий тик повторит.
+        notify(cfg, "DelayedMessage", `Ошибка доставки ${item.id}: ${String(err)}`);
       }
     }
 
@@ -49,7 +54,12 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
     if (probe.kind === "error") return; // временный сбой — следующий тик повторит
 
     for (const item of waiting) {
-      await deps.deliver(item, cfg);
+      try {
+        await deps.deliver(item, cfg);
+      } catch (err) {
+        // Изоляция сбоя элемента; остальные доставляются, следующий тик повторит.
+        notify(cfg, "DelayedMessage", `Ошибка доставки ${item.id}: ${String(err)}`);
+      }
     }
   } finally {
     releaseLock();
