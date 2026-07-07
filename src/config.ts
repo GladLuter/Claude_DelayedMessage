@@ -29,3 +29,8 @@ export function loadConfig(): Config {
   fs.writeFileSync(configFile(), JSON.stringify(DEFAULT_CONFIG, null, 2));
   return { ...DEFAULT_CONFIG };
 }
+
+export function saveConfig(cfg: Config): void {
+  ensureDirs();
+  fs.writeFileSync(configFile(), JSON.stringify(cfg, null, 2));
+}
