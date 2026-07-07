@@ -5,7 +5,7 @@ import { runOnce } from "../src/tick.js";
 import { addItem, getItem, writeItem } from "../src/queue.js";
 import { acquireLock, releaseLock } from "../src/lock.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
-import { lastTickFile } from "../src/paths.js";
+import { lastTickFile, lockFile } from "../src/paths.js";
 import type { QueueItem } from "../src/types.js";
 
 let dir: string;
@@ -100,6 +100,7 @@ describe("runOnce", () => {
     await runOnce(cfg, { probe, deliver });
     expect(probe).not.toHaveBeenCalled();
     expect(deliver).not.toHaveBeenCalled();
+    expect(fs.existsSync(lockFile())).toBe(true); // чужой lock не снят
     releaseLock();
   });
 });
