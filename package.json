@@ -1,0 +1,25 @@
+{
+  "name": "claude-delayed-message",
+  "version": "0.1.0",
+  "description": "Queue messages for Claude Code sessions - delivered the moment your usage limits reset, or at a time you choose.",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "bin": { "cdm": "dist/cli.js" },
+  "files": ["dist", "skill", "README.md", "README.ru.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "node-notifier": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/node-notifier": "^8.0.5",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
