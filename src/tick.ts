@@ -1,0 +1,57 @@
+import fs from "node:fs";
+import { acquireLock, releaseLock } from "./lock.js";
+import { ensureDirs, lastTickFile } from "./paths.js";
+import { deliverItem, type DeliverOutcome } from "./deliver.js";
+import { notify } from "./notify.js";
+import { probeLimits, type ProbeOutcome } from "./probe.js";
+import { pending, writeItem } from "./queue.js";
+import type { Config, QueueItem } from "./types.js";
+
+export interface TickDeps {
+  probe: (cfg: Config) => Promise<ProbeOutcome>;
+  deliver: (item: QueueItem, cfg: Config) => Promise<DeliverOutcome>;
+}
+
+const REAL_DEPS: TickDeps = { probe: probeLimits, deliver: deliverItem };
+
+export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<void> {
+  ensureDirs();
+  fs.writeFileSync(lastTickFile(), new Date().toISOString());
+  if (!acquireLock(cfg.tickIntervalMinutes * 60_000 * 2)) return;
+  try {
+    let items = pending();
+    if (items.length === 0) return; // зонд при пустой очереди запрещён (спека §5.3)
+
+    const now = new Date();
+    for (const item of items.filter((i) => i.trigger.type === "at" && new Date(i.trigger.at!) <= now)) {
+      const outcome = await deps.deliver(item, cfg);
+      if (outcome === "limited") {
+        item.trigger = { type: "limits-reset" };
+        item.fallbackFromAt = true;
+        writeItem(item);
+        notify(cfg, "DelayedMessage", `Лимиты заняты — ${item.id} уйдёт после сброса`);
+      }
+    }
+
+    const waiting = pending().filter((i) => i.trigger.type === "limits-reset");
+    if (waiting.length === 0) return;
+
+    const probe = await deps.probe(cfg);
+    if (probe.kind === "limited") {
+      if (probe.resetAt) {
+        for (const item of waiting) {
+          item.expectedResetAt = probe.resetAt.toISOString();
+          writeItem(item);
+        }
+      }
+      return;
+    }
+    if (probe.kind === "error") return; // временный сбой — следующий тик повторит
+
+    for (const item of waiting) {
+      await deps.deliver(item, cfg);
+    }
+  } finally {
+    releaseLock();
+  }
+}
