@@ -59,6 +59,12 @@ describe("deliverItem", () => {
     expect(getItem(bad.id)?.status).toBe("failed");
     expect(fakeCalls(dir)).toHaveLength(0); // claude не должен запускаться при инъекции
   });
+
+  it("успешный ответ, цитирующий фразу лимита, считается sent", async () => {
+    cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: '{"result":"объясняю ошибку usage limit reached"}', exitCode: 0 }), notifications: false };
+    expect(await deliverItem(item, cfg)).toBe("sent");
+    expect(getItem(item.id)?.status).toBe("sent");
+  });
 });
 
 describe("delivery-log rotation", () => {
@@ -69,6 +75,19 @@ describe("delivery-log rotation", () => {
     fs.mkdirSync(logDir(), { recursive: true });
     fs.writeFileSync(file, "x".repeat(5 * 1024 * 1024 + 1));
     appendLog({ ts: "now" });
+    expect(fs.existsSync(`${file}.1`)).toBe(true);
+    expect(fs.statSync(file).size).toBeLessThan(1024);
+  });
+
+  it("повторная ротация не застревает", async () => {
+    tempDataDir();
+    const { appendLog } = await import("../src/delivery-log.js");
+    const file = path.join(logDir(), "deliveries.jsonl");
+    fs.mkdirSync(logDir(), { recursive: true });
+    fs.writeFileSync(file, "x".repeat(5 * 1024 * 1024 + 1));
+    appendLog({ ts: "1" });
+    fs.writeFileSync(file, "y".repeat(5 * 1024 * 1024 + 1));
+    appendLog({ ts: "2" });
     expect(fs.existsSync(`${file}.1`)).toBe(true);
     expect(fs.statSync(file).size).toBeLessThan(1024);
   });

@@ -29,14 +29,9 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
   const out = `${res.stdout}\n${res.stderr}`;
   const project = path.basename(item.projectDir);
 
-  const limit = parseLimitOutput(out);
-  if (limit.limited) {
-    if (limit.resetAt) item.expectedResetAt = limit.resetAt.toISOString();
-    writeItem(item); // attempts НЕ увеличиваем — лимит не ошибка
-    appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "limited" });
-    return "limited";
-  }
-
+  // Успех определяем по коду возврата ПЕРЕД проверкой лимит-фразы: ответ
+  // claude может процитировать "usage limit reached" (если сообщение было
+  // о лимитах), а настоящая ошибка лимита всегда даёт ненулевой exitCode.
   if (res.exitCode === 0 && !res.timedOut) {
     item.status = "sent";
     item.result = res.stdout.slice(0, 2000);
@@ -44,6 +39,14 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
     appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "sent", project });
     notify(cfg, "DelayedMessage", `Сообщение доставлено: ${project}`);
     return "sent";
+  }
+
+  const limit = parseLimitOutput(out);
+  if (limit.limited) {
+    if (limit.resetAt) item.expectedResetAt = limit.resetAt.toISOString();
+    writeItem(item); // attempts НЕ увеличиваем — лимит не ошибка
+    appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "limited" });
+    return "limited";
   }
 
   item.attempts += 1;
