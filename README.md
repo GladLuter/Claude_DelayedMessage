@@ -56,6 +56,7 @@ OS scheduler (every 10 min) ──►  cdm run-once
                                  via  claude --resume <session> -p  (stdin)
 ```
 
+- Queueing itself runs in a **local hook** (`UserPromptExpansion`) — `/delay` works even when your limits are fully exhausted, because no model turn is needed to enqueue.
 - The probe is **free while you're limited** (rejected requests don't consume anything) and costs a fraction of a cent when limits are back — at which point your real message is sent immediately anyway.
 - Early resets (Anthropic occasionally resets everyone's limits ahead of schedule) are caught within one tick.
 - Delivery resumes **the same session ID**, so open the chat and continue where it left off.
