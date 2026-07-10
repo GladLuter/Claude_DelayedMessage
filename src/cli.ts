@@ -4,10 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { loadConfig } from "./config.js";
 import { readLog } from "./delivery-log.js";
+import { handleHookPayload } from "./hook.js";
 import { lastTickFile } from "./paths.js";
 import { addItem, getItem, listItems, pending, writeItem } from "./queue.js";
 import { cliEntryPath, installScheduler, schedulerInstalled, uninstallScheduler } from "./schedulers/index.js";
 import { detectSessionId } from "./session-detect.js";
+import { installHook, uninstallHook } from "./settings-hook.js";
 import { installSkill, uninstallSkill } from "./skill-install.js";
 import { runOnce } from "./tick.js";
 import { parseAt } from "./time-parser.js";
@@ -134,6 +136,29 @@ program
   });
 
 program
+  .command("hook")
+  .description("Внутреннее: обработчик UserPromptExpansion для /delay (вызывается хуком Claude Code)")
+  .action(() => {
+    let raw = "";
+    try {
+      raw = fs.readFileSync(0, "utf8");
+    } catch {
+      process.exit(0);
+    }
+    let payload: unknown;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      process.exit(0);
+    }
+    const res = handleHookPayload(payload as Parameters<typeof handleHookPayload>[0]);
+    if (res.block) {
+      process.stdout.write(JSON.stringify({ decision: "block", reason: res.reason ?? "" }));
+    }
+    process.exit(0);
+  });
+
+program
   .command("install")
   .description("Зарегистрировать планировщик ОС и установить слэш-скилл /delay")
   .option("--no-scheduler", "не регистрировать планировщик")
@@ -146,6 +171,8 @@ program
     }
     if (opts.skill) {
       console.log(`Скилл установлен: ${installSkill()}`);
+      installHook(process.execPath, cliEntryPath());
+      console.log("Хук /delay зарегистрирован (постановка в очередь без хода модели).");
     }
   });
 
@@ -155,7 +182,8 @@ program
   .action(() => {
     uninstallScheduler();
     uninstallSkill();
-    console.log("Планировщик снят, скилл удалён. Данные в ~/.claude-delayed-message сохранены.");
+    uninstallHook(cliEntryPath());
+    console.log("Планировщик снят, скилл и хук удалены. Данные в ~/.claude-delayed-message сохранены.");
   });
 
 program
