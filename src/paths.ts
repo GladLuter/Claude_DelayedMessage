@@ -23,6 +23,12 @@ export function configFile(): string {
 export function lastTickFile(): string {
   return path.join(dataDir(), "last-tick.txt");
 }
+export function lastProbeErrorFile(): string {
+  return path.join(dataDir(), "last-probe-error.txt");
+}
+export function probeStateFile(): string {
+  return path.join(dataDir(), "probe-state.json");
+}
 
 export function ensureDirs(): void {
   for (const d of [dataDir(), queueDir(), quarantineDir(), logDir()]) {

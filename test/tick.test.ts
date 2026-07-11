@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
+import path from "node:path";
 import { tempDataDir } from "./helpers.js";
 import { runOnce } from "../src/tick.js";
 import { addItem, getItem, writeItem } from "../src/queue.js";
 import { acquireLock, releaseLock } from "../src/lock.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
-import { lastTickFile, lockFile } from "../src/paths.js";
+import { lastTickFile, lockFile, lastProbeErrorFile, logDir } from "../src/paths.js";
 import type { QueueItem } from "../src/types.js";
 
 let dir: string;
@@ -118,5 +119,30 @@ describe("runOnce", () => {
     });
     await runOnce(cfg, { probe, deliver });
     expect(delivered).toContain("ok");
+  });
+
+  it("probe error: пишет last-probe-error и журнал, доставки нет", async () => {
+    add();
+    const probe = vi.fn(async () => ({ kind: "error" as const, detail: "API Error: 401", authError: true }));
+    const deliver = vi.fn();
+    await runOnce(cfg, { probe, deliver });
+    expect(fs.existsSync(lastProbeErrorFile())).toBe(true);
+    expect(fs.readFileSync(lastProbeErrorFile(), "utf8")).toContain("[AUTH]");
+    const log = fs.readFileSync(path.join(logDir(), "deliveries.jsonl"), "utf8");
+    expect(log).toContain("probe-error");
+    expect(deliver).not.toHaveBeenCalled();
+  });
+
+  it("успешный зонд очищает probe-error состояние", async () => {
+    add();
+    await runOnce(cfg, { probe: vi.fn(async () => ({ kind: "error" as const, detail: "x", authError: false })), deliver: vi.fn() });
+    expect(fs.existsSync(lastProbeErrorFile())).toBe(true);
+    const deliver = vi.fn(async (i: QueueItem) => {
+      i.status = "sent";
+      writeItem(i);
+      return "sent" as const;
+    });
+    await runOnce(cfg, { probe: vi.fn(async () => ({ kind: "available" as const })), deliver });
+    expect(fs.existsSync(lastProbeErrorFile())).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ import type { Config } from "./types.js";
 export type ProbeOutcome =
   | { kind: "available" }
   | { kind: "limited"; resetAt?: Date }
-  | { kind: "error"; detail: string };
+  | { kind: "error"; detail: string; authError: boolean };
 
 /** Минимальный запрос на haiku. Вызывать ТОЛЬКО при непустой очереди. */
 export async function probeLimits(cfg: Config): Promise<ProbeOutcome> {
@@ -18,5 +18,7 @@ export async function probeLimits(cfg: Config): Promise<ProbeOutcome> {
   const limit = parseLimitOutput(out);
   if (limit.limited) return { kind: "limited", resetAt: limit.resetAt };
   if (res.exitCode === 0 && !res.timedOut) return { kind: "available" };
-  return { kind: "error", detail: out.slice(0, 500) };
+  // 401/устаревший OAuth CLI: десктоп-приложение работает, а headless -p падает.
+  const authError = /"api_error_status"\s*:\s*401|Failed to authenticate|Invalid authentication/i.test(out);
+  return { kind: "error", detail: out.slice(0, 500), authError };
 }

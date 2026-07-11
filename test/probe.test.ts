@@ -39,4 +39,20 @@ describe("probeLimits", () => {
     const r = await probeLimits(cfgWith(fake));
     expect(r.kind).toBe("error");
   });
+
+  it("401 классифицируется как auth-ошибка", async () => {
+    const fake = makeFakeClaude(dir, {
+      stdout: '{"is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}',
+      exitCode: 1,
+    });
+    const r = await probeLimits(cfgWith(fake));
+    expect(r.kind).toBe("error");
+    if (r.kind === "error") expect(r.authError).toBe(true);
+  });
+
+  it("прочая ошибка — authError false", async () => {
+    const fake = makeFakeClaude(dir, { stderr: "boom", exitCode: 2 });
+    const r = await probeLimits(cfgWith(fake));
+    if (r.kind === "error") expect(r.authError).toBe(false);
+  });
 });
