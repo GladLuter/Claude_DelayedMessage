@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { acquireLock, releaseLock } from "./lock.js";
-import { ensureDirs, lastTickFile } from "./paths.js";
+import { appendLog } from "./delivery-log.js";
+import { ensureDirs, lastProbeErrorFile, lastTickFile, probeStateFile } from "./paths.js";
 import { deliverItem, type DeliverOutcome } from "./deliver.js";
 import { notify } from "./notify.js";
 import { probeLimits, type ProbeOutcome } from "./probe.js";
@@ -13,6 +14,66 @@ export interface TickDeps {
 }
 
 const REAL_DEPS: TickDeps = { probe: probeLimits, deliver: deliverItem };
+
+interface ProbeErrorState {
+  count: number;
+}
+
+function readProbeState(): ProbeErrorState {
+  try {
+    return JSON.parse(fs.readFileSync(probeStateFile(), "utf8")) as ProbeErrorState;
+  } catch {
+    return { count: 0 };
+  }
+}
+
+/** Успешный зонд (available/limited) сбрасывает состояние ошибок. */
+function clearProbeErrors(): void {
+  try {
+    fs.unlinkSync(probeStateFile());
+  } catch {
+    /* нет файла */
+  }
+  try {
+    fs.unlinkSync(lastProbeErrorFile());
+  } catch {
+    /* нет файла */
+  }
+}
+
+/**
+ * 11 часов молчаливого отказа зонда — недопустимо. Пишем след (файл + журнал)
+ * и уведомляем: auth-ошибка — сразу (пользователь должен перелогинить CLI),
+ * прочие — с 3-го подряд тика; далее напоминание каждые 36 тиков (~6 ч).
+ */
+function recordProbeError(cfg: Config, probe: { detail: string; authError: boolean }): void {
+  const state = readProbeState();
+  state.count += 1;
+  fs.writeFileSync(probeStateFile(), JSON.stringify(state));
+  fs.writeFileSync(
+    lastProbeErrorFile(),
+    `${new Date().toISOString()} ${probe.authError ? "[AUTH] " : ""}${probe.detail.slice(0, 500)}`,
+  );
+  appendLog({
+    ts: new Date().toISOString(),
+    outcome: "probe-error",
+    auth: probe.authError,
+    consecutive: state.count,
+    detail: probe.detail.slice(0, 300),
+  });
+  const notifyNow = probe.authError
+    ? state.count === 1 || state.count % 36 === 0
+    : state.count === 3 || state.count % 36 === 0;
+  if (notifyNow) {
+    notify(
+      cfg,
+      "DelayedMessage",
+      probe.authError
+        ? "claude CLI не аутентифицирован (401): выполните claude в терминале и залогиньтесь — очередь ждёт"
+        : `Зонд лимитов падает (${state.count} тиков подряд) — подробности: cdm status`,
+    );
+  }
+}
 
 export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<void> {
   ensureDirs();
@@ -42,6 +103,11 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
     if (waiting.length === 0) return;
 
     const probe = await deps.probe(cfg);
+    if (probe.kind === "error") {
+      recordProbeError(cfg, probe);
+      return; // временный сбой — следующий тик повторит
+    }
+    clearProbeErrors(); // зонд ответил осмысленно
     if (probe.kind === "limited") {
       if (probe.resetAt) {
         for (const item of waiting) {
@@ -51,7 +117,6 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
       }
       return;
     }
-    if (probe.kind === "error") return; // временный сбой — следующий тик повторит
 
     for (const item of waiting) {
       try {

@@ -5,7 +5,7 @@ import path from "node:path";
 import { loadConfig } from "./config.js";
 import { readLog } from "./delivery-log.js";
 import { handleHookPayload } from "./hook.js";
-import { lastTickFile } from "./paths.js";
+import { lastProbeErrorFile, lastTickFile } from "./paths.js";
 import { addItem, getItem, listItems, pending, writeItem } from "./queue.js";
 import { cliEntryPath, installScheduler, schedulerInstalled, uninstallScheduler } from "./schedulers/index.js";
 import { detectSessionId } from "./session-detect.js";
@@ -202,6 +202,11 @@ program
     console.log(`CLI тика: ${cliEntryPath()}`);
     console.log(`claude: ${cfg.claudePath}`);
     console.log(`Последний тик: ${lastTick}`);
+    try {
+      console.log(`Ошибка зонда: ${fs.readFileSync(lastProbeErrorFile(), "utf8").trim()}`);
+    } catch {
+      /* зонд не ошибался */
+    }
     console.log(`Очередь: ${pending(items).length} pending / ${items.length} всего`);
   });
 
