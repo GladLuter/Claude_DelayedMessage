@@ -87,6 +87,8 @@ Time formats for `--at`: `09:00`, `tomorrow 9am`, `tomorrow 12:30pm`, ISO like `
 
 **The app was closed when the message fired — did I lose the answer?** No. The session file is shared; open the chat in Claude Code and the new turn is there.
 
+**Nothing is being delivered — how do I find out why?** Run `cdm status`. If it shows a probe error mentioning `401` / `Failed to authenticate`, your **standalone CLI** login has expired (the desktop app refreshes its own token, the CLI does not): open any terminal, run `claude`, and log in — the queue resumes automatically on the next tick. You also get a desktop notification when this happens.
+
 **How do I uninstall?** `cdm uninstall` removes the scheduler entry and the skill; your data folder stays.
 
 ## License
