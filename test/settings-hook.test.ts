@@ -56,7 +56,7 @@ describe("installHook", () => {
 
   it("битый settings.json не перезаписывается — install бросает ошибку", () => {
     fs.writeFileSync(settingsFile(), "{broken json");
-    expect(() => installHook(nodePath, cliPath)).toThrow(/повреждён/);
+    expect(() => installHook(nodePath, cliPath)).toThrow(/corrupt/);
     expect(fs.readFileSync(settingsFile(), "utf8")).toBe("{broken json");
   });
 });

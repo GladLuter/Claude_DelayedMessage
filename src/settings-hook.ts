@@ -35,9 +35,7 @@ function loadSettings(): Record<string, unknown> {
     return JSON.parse(raw) as Record<string, unknown>;
   } catch {
     // Битый settings.json молча перезаписывать нельзя — сотрутся настройки пользователя.
-    throw new Error(
-      `settings.json повреждён (${settingsFile()}) — исправьте его вручную и повторите cdm install`,
-    );
+    throw new Error(`settings.json is corrupt (${settingsFile()}) — fix it manually and re-run cdm install`);
   }
 }
 

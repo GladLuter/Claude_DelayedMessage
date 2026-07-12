@@ -1,6 +1,7 @@
 import path from "node:path";
 import { runClaude } from "./claude-runner.js";
 import { appendLog } from "./delivery-log.js";
+import { messages } from "./i18n.js";
 import { parseLimitOutput } from "./limit-parser.js";
 import { notify } from "./notify.js";
 import { writeItem } from "./queue.js";
@@ -12,6 +13,7 @@ export type DeliverOutcome = "sent" | "limited" | "error";
 const SESSION_ID_RE = /^[0-9a-f][0-9a-f-]{6,34}[0-9a-f]$/i;
 
 export async function deliverItem(item: QueueItem, cfg: Config): Promise<DeliverOutcome> {
+  const m = messages(cfg.lang);
   if (!SESSION_ID_RE.test(item.sessionId)) {
     item.status = "failed";
     item.result = `invalid sessionId: ${item.sessionId}`;
@@ -37,7 +39,7 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
     item.result = res.stdout.slice(0, 2000);
     writeItem(item);
     appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "sent", project });
-    notify(cfg, "DelayedMessage", `Сообщение доставлено: ${project}`);
+    notify(cfg, "DelayedMessage", m.ntDelivered(project));
     return "sent";
   }
 
@@ -54,7 +56,7 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
   if (item.attempts >= cfg.maxAttempts) {
     item.status = "failed";
     item.result = detail;
-    notify(cfg, "DelayedMessage", `Доставка провалена (${project}): ${item.id}`);
+    notify(cfg, "DelayedMessage", m.ntFailed(project, item.id));
   }
   writeItem(item);
   appendLog({

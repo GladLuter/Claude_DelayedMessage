@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { acquireLock, releaseLock } from "./lock.js";
 import { appendLog } from "./delivery-log.js";
+import { messages } from "./i18n.js";
 import { ensureDirs, lastProbeErrorFile, lastTickFile, probeStateFile } from "./paths.js";
 import { deliverItem, type DeliverOutcome } from "./deliver.js";
 import { notify } from "./notify.js";
@@ -47,6 +48,7 @@ function clearProbeErrors(): void {
  * прочие — с 3-го подряд тика; далее напоминание каждые 36 тиков (~6 ч).
  */
 function recordProbeError(cfg: Config, probe: { detail: string; authError: boolean }): void {
+  const m = messages(cfg.lang);
   const state = readProbeState();
   state.count += 1;
   fs.writeFileSync(probeStateFile(), JSON.stringify(state));
@@ -65,13 +67,7 @@ function recordProbeError(cfg: Config, probe: { detail: string; authError: boole
     ? state.count === 1 || state.count % 36 === 0
     : state.count === 3 || state.count % 36 === 0;
   if (notifyNow) {
-    notify(
-      cfg,
-      "DelayedMessage",
-      probe.authError
-        ? "claude CLI не аутентифицирован (401): выполните claude в терминале и залогиньтесь — очередь ждёт"
-        : `Зонд лимитов падает (${state.count} тиков подряд) — подробности: cdm status`,
-    );
+    notify(cfg, "DelayedMessage", probe.authError ? m.ntAuth : m.ntProbeFail(state.count));
   }
 }
 
@@ -91,7 +87,7 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
           item.trigger = { type: "limits-reset" };
           item.fallbackFromAt = true;
           writeItem(item);
-          notify(cfg, "DelayedMessage", `Лимиты заняты — ${item.id} уйдёт после сброса`);
+          notify(cfg, "DelayedMessage", messages(cfg.lang).ntFallback(item.id));
         }
       } catch (err) {
         // Сбой одного элемента не должен блокировать остальные; следующий тик повторит.
