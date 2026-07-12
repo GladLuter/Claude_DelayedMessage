@@ -2,6 +2,17 @@
   "name": "claude-delayed-message",
   "version": "0.1.0",
   "description": "Queue messages for Claude Code sessions - delivered the moment your usage limits reset, or at a time you choose.",
+  "author": "Evgenii S <gladluter@gmail.com>",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "cli",
+    "scheduler",
+    "delayed-message",
+    "usage-limits",
+    "queue",
+    "automation"
+  ],
   "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "bin": { "cdm": "dist/cli.js" },
