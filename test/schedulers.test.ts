@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { TASK_NAME, buildCreateArgs, buildDeleteArgs, buildQueryArgs } from "../src/schedulers/windows.js";
+import {
+  TASK_NAME,
+  buildCreateArgs,
+  buildDeleteArgs,
+  buildQueryArgs,
+  buildVbsLauncher,
+} from "../src/schedulers/windows.js";
 import { LABEL, buildPlist } from "../src/schedulers/macos.js";
 import { CRON_MARKER, buildCronLine, buildServiceUnit, buildTimerUnit } from "../src/schedulers/linux.js";
 
@@ -7,15 +13,22 @@ const node = "/usr/bin/node";
 const cli = "/opt/cdm/dist/cli.js";
 
 describe("windows schtasks", () => {
-  it("генерирует create/query/delete", () => {
-    const args = buildCreateArgs(10, node, cli);
-    expect(args).toContain("/SC");
+  it("vbs-лаунчер прячет окно и корректно квотирует пути", () => {
+    const vbs = buildVbsLauncher(node, cli);
+    expect(vbs).toContain(`""${node}""`);
+    expect(vbs).toContain(`""${cli}""`);
+    expect(vbs).toContain("run-once");
+    expect(vbs).toContain(", 0, False");
+  });
+
+  it("генерирует create/query/delete через wscript //B", () => {
+    const args = buildCreateArgs(10, "C:\\Windows\\System32\\wscript.exe", "C:\\data\\run-hidden.vbs");
     expect(args[args.indexOf("/SC") + 1]).toBe("MINUTE");
     expect(args[args.indexOf("/MO") + 1]).toBe("10");
     const tr = args[args.indexOf("/TR") + 1];
-    expect(tr).toContain(node);
-    expect(tr).toContain(cli);
-    expect(tr).toContain("run-once");
+    expect(tr).toContain("wscript.exe");
+    expect(tr).toContain("//B");
+    expect(tr).toContain("run-hidden.vbs");
     expect(buildQueryArgs()).toEqual(["/Query", "/TN", TASK_NAME]);
     expect(buildDeleteArgs()).toEqual(["/Delete", "/TN", TASK_NAME, "/F"]);
   });
