@@ -70,10 +70,13 @@ OS scheduler (every 10 min) ──►  cdm run-once
 | `cdm edit <id> [-m "<text>"] [--at "<time>"] [--on-reset]` | Edit a pending item |
 | `cdm cancel <id>` | Cancel a pending item |
 | `cdm log` | Delivery history |
-| `cdm status` | Scheduler state, resolved `claude` path, last tick, queue size |
-| `cdm install` / `cdm uninstall` | Register/remove the scheduler and `/delay` skill |
+| `cdm status` | Scheduler state, resolved `claude` path, CLI token expiry, last tick, queue size |
+| `cdm lang [code]` | Show or set the output language (`en`, `ru`); English by default |
+| `cdm install` / `cdm uninstall` | Register/remove the scheduler, the `/delay` skill and hook |
 
 Time formats for `--at`: `09:00`, `tomorrow 9am`, `tomorrow 12:30pm`, ISO like `2026-07-08T09:00`. A bare `HH:MM` that already passed today rolls to tomorrow.
+
+Output is English by default. Run `cdm lang ru` to switch all messages, hook replies and notifications to Russian (`cdm lang en` to switch back).
 
 ## FAQ
 
