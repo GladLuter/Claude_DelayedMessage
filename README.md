@@ -91,6 +91,18 @@ Time formats for `--at`: `09:00`, `tomorrow 9am`, `tomorrow 12:30pm`, ISO like `
 
 **How do I uninstall?** `cdm uninstall` removes the scheduler entry and the skill; your data folder stays.
 
+## The CLI access token (read this once)
+
+Probing and delivery run through the **standalone `claude` CLI** in headless mode. Its access token is separate from the Claude Code desktop app:
+
+- The desktop app refreshes its token automatically — you can work normally for weeks while the CLI token is long expired.
+- Headless mode (`claude -p`) does **not** refresh an expired token — it fails with `401 Invalid authentication credentials`.
+- `claude auth status` may still print `loggedIn: true` with an expired access token — don't rely on it alone.
+
+**Refresh:** run `claude auth login` in any terminal and complete the browser sign-in. The queue resumes automatically on the next tick — nothing else to do.
+
+**Monitoring:** nothing manual is required. On the first failed tick you get a desktop notification, and `cdm status` shows the probe error marked `[AUTH]` (with a reminder roughly every 6 hours while the problem persists). `cdm status` also prints the token expiry date, so you can spot it going stale before anything breaks.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — free for personal and other noncommercial use.
