@@ -25,7 +25,7 @@ describe("handleHookPayload", () => {
       cwd: dir,
     });
     expect(res.block).toBe(true);
-    expect(res.reason).toContain("после сброса лимитов");
+    expect(res.reason).toContain("after limits reset");
     const items = listItems();
     expect(items).toHaveLength(1);
     expect(items[0].status).toBe("pending");
@@ -37,6 +37,15 @@ describe("handleHookPayload", () => {
 
   it("list на пустой очереди", () => {
     const res = handleHookPayload({ command_name: "delay", command_args: "list", session_id: sessionId, cwd: dir });
+    expect(res.block).toBe(true);
+    expect(res.reason).toContain("queue is empty");
+  });
+
+  it("list на пустой очереди — русский язык", () => {
+    const res = handleHookPayload(
+      { command_name: "delay", command_args: "list", session_id: sessionId, cwd: dir },
+      "ru",
+    );
     expect(res.block).toBe(true);
     expect(res.reason).toContain("очередь пуста");
   });
@@ -92,7 +101,7 @@ describe("handleHookPayload", () => {
   it("без валидного session_id — не ставит в очередь, объясняет причину", () => {
     const res = handleHookPayload({ command_name: "delay", command_args: "hello", session_id: "", cwd: dir });
     expect(res.block).toBe(true);
-    expect(res.reason).toContain("сессию");
+    expect(res.reason).toContain("could not determine the session");
     expect(listItems()).toHaveLength(0);
   });
 });

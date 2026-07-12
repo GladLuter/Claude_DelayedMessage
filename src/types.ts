@@ -1,3 +1,5 @@
+import type { Lang } from "./i18n.js";
+
 export type TriggerType = "limits-reset" | "at";
 
 export interface Trigger {
@@ -28,4 +30,5 @@ export interface Config {
   maxAttempts: number;
   deliveryTimeoutMinutes: number;
   notifications: boolean;
+  lang: Lang;
 }

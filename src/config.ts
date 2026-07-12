@@ -8,6 +8,7 @@ export const DEFAULT_CONFIG: Config = {
   maxAttempts: 3,
   deliveryTimeoutMinutes: 60,
   notifications: true,
+  lang: "en",
 };
 
 export function loadConfig(): Config {

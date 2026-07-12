@@ -80,6 +80,10 @@ describe("config", () => {
     expect(loadConfig().claudePath).toBe("claude");
   });
 
+  it("дефолтный язык — английский", () => {
+    expect(loadConfig().lang).toBe("en");
+  });
+
   it("битый config.json бэкапится, возвращаются дефолты", () => {
     fs.writeFileSync(path.join(dir, "config.json"), "{broken");
     const cfg = loadConfig();
