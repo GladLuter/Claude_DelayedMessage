@@ -91,7 +91,7 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
         }
       } catch (err) {
         // Сбой одного элемента не должен блокировать остальные; следующий тик повторит.
-        notify(cfg, "DelayedMessage", `Ошибка доставки ${item.id}: ${String(err)}`);
+        notify(cfg, "DelayedMessage", messages(cfg.lang).ntDeliveryError(item.id, String(err)));
       }
     }
 
@@ -119,7 +119,7 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
         await deps.deliver(item, cfg);
       } catch (err) {
         // Изоляция сбоя элемента; остальные доставляются, следующий тик повторит.
-        notify(cfg, "DelayedMessage", `Ошибка доставки ${item.id}: ${String(err)}`);
+        notify(cfg, "DelayedMessage", messages(cfg.lang).ntDeliveryError(item.id, String(err)));
       }
     }
   } finally {

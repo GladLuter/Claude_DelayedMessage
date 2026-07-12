@@ -63,6 +63,7 @@ export interface Messages {
   ntProbeFail: (n: number) => string;
   ntDelivered: (project: string) => string;
   ntFailed: (project: string, id: string) => string;
+  ntDeliveryError: (id: string, detail: string) => string;
   // settings-hook
   settingsCorrupt: (path: string) => string;
 }
@@ -116,6 +117,7 @@ const en: Messages = {
   ntProbeFail: (n) => `Limit probe is failing (${n} ticks in a row) — details: cdm status`,
   ntDelivered: (project) => `Message delivered: ${project}`,
   ntFailed: (project, id) => `Delivery failed (${project}): ${id}`,
+  ntDeliveryError: (id, detail) => `Delivery error ${id}: ${detail}`,
   settingsCorrupt: (path) => `settings.json is corrupt (${path}) — fix it manually and re-run cdm install`,
 };
 
@@ -168,6 +170,7 @@ const ru: Messages = {
   ntProbeFail: (n) => `Зонд лимитов падает (${n} тиков подряд) — подробности: cdm status`,
   ntDelivered: (project) => `Сообщение доставлено: ${project}`,
   ntFailed: (project, id) => `Доставка провалена (${project}): ${id}`,
+  ntDeliveryError: (id, detail) => `Ошибка доставки ${id}: ${detail}`,
   settingsCorrupt: (path) => `settings.json повреждён (${path}) — исправьте его вручную и повторите cdm install`,
 };
 
