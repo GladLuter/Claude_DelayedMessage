@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import fs from "node:fs";
 import path from "node:path";
+import { cliTokenInfo } from "./auth-check.js";
 import { loadConfig } from "./config.js";
 import { readLog } from "./delivery-log.js";
 import { handleHookPayload } from "./hook.js";
@@ -201,6 +202,14 @@ program
     console.log(`Планировщик: ${schedulerInstalled() ? "зарегистрирован" : "НЕ зарегистрирован"}`);
     console.log(`CLI тика: ${cliEntryPath()}`);
     console.log(`claude: ${cfg.claudePath}`);
+    const token = cliTokenInfo();
+    if (token.expiresAt) {
+      console.log(
+        token.expired
+          ? `Токен CLI: ИСТЁК ${token.expiresAt.toLocaleString()} — выполните: claude auth login`
+          : `Токен CLI: свеж до ${token.expiresAt.toLocaleString()}`,
+      );
+    }
     console.log(`Последний тик: ${lastTick}`);
     try {
       console.log(`Ошибка зонда: ${fs.readFileSync(lastProbeErrorFile(), "utf8").trim()}`);
