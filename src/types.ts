@@ -8,7 +8,7 @@ export interface Trigger {
   at?: string;
 }
 
-export type Status = "pending" | "sent" | "failed" | "canceled";
+export type Status = "pending" | "delivering" | "sent" | "failed" | "canceled";
 
 export interface QueueItem {
   id: string;
@@ -21,6 +21,7 @@ export interface QueueItem {
   attempts: number;
   expectedResetAt?: string;
   fallbackFromAt?: boolean;
+  claimedAt?: string;
   result?: string;
 }
 

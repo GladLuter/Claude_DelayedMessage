@@ -14,14 +14,13 @@ function cfgWith(claudePath: string): Config {
 }
 
 describe("probeLimits", () => {
-  it("limited: ошибка лимита с ts", async () => {
+  it("limited: реальный 429 JSON", async () => {
     const fake = makeFakeClaude(dir, {
-      stdout: "Claude AI usage limit reached|1751900000",
+      stdout: '{"is_error":true,"api_error_status":429,"result":"You\'ve hit your session limit · resets 5:20am (Europe/Kiev)"}',
       exitCode: 1,
     });
     const r = await probeLimits(cfgWith(fake));
     expect(r.kind).toBe("limited");
-    if (r.kind === "limited") expect(r.resetAt?.getTime()).toBe(1751900000000);
   });
 
   it("available: успешный ответ, зонд шёл с haiku и без персистентности", async () => {

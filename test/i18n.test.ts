@@ -17,4 +17,11 @@ describe("i18n", () => {
     expect(isLang("xx")).toBe(false);
     expect(LANGS).toEqual(["en", "ru"]);
   });
+
+  it("ntTimedOut — функция, возвращает строку с id для en и ru", () => {
+    expect(typeof messages("en").ntTimedOut).toBe("function");
+    expect(messages("en").ntTimedOut("proj", "abc123")).toContain("abc123");
+    expect(typeof messages("ru").ntTimedOut).toBe("function");
+    expect(messages("ru").ntTimedOut("proj", "abc123")).toContain("abc123");
+  });
 });

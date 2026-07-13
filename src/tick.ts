@@ -6,7 +6,7 @@ import { ensureDirs, lastProbeErrorFile, lastTickFile, probeStateFile } from "./
 import { deliverItem, type DeliverOutcome } from "./deliver.js";
 import { notify } from "./notify.js";
 import { probeLimits, type ProbeOutcome } from "./probe.js";
-import { pending, writeItem } from "./queue.js";
+import { listItems, pending, writeItem } from "./queue.js";
 import type { Config, QueueItem } from "./types.js";
 
 export interface TickDeps {
@@ -71,11 +71,25 @@ function recordProbeError(cfg: Config, probe: { detail: string; authError: boole
   }
 }
 
+/** "delivering", зависшее дольше таймаута доставки (+5 мин запаса) — процесс
+ * доставки умер (перезагрузка и т.п.); возвращаем в очередь для повторной попытки. */
+function reclaimStaleDeliveries(cfg: Config): void {
+  const staleMs = (cfg.deliveryTimeoutMinutes + 5) * 60_000;
+  for (const it of listItems()) {
+    if (it.status === "delivering" && it.claimedAt && Date.now() - new Date(it.claimedAt).getTime() > staleMs) {
+      it.status = "pending";
+      it.claimedAt = undefined;
+      writeItem(it);
+    }
+  }
+}
+
 export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<void> {
   ensureDirs();
   fs.writeFileSync(lastTickFile(), new Date().toISOString());
   if (!acquireLock(cfg.tickIntervalMinutes * 60_000 * 2)) return;
   try {
+    reclaimStaleDeliveries(cfg);
     const items = pending();
     if (items.length === 0) return; // зонд при пустой очереди запрещён (спека §5.3)
 
@@ -115,12 +129,15 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
     }
 
     for (const item of waiting) {
+      let outcome: DeliverOutcome | undefined;
       try {
-        await deps.deliver(item, cfg);
+        outcome = await deps.deliver(item, cfg);
       } catch (err) {
         // Изоляция сбоя элемента; остальные доставляются, следующий тик повторит.
         notify(cfg, "DelayedMessage", messages(cfg.lang).ntDeliveryError(item.id, String(err)));
+        continue;
       }
+      if (outcome === "limited") break; // лимиты исчерпаны в середине пачки — остальное ждёт след. сброса
     }
   } finally {
     releaseLock();

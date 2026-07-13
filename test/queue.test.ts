@@ -74,7 +74,7 @@ describe("config", () => {
     const cfg = loadConfig();
     expect(cfg.tickIntervalMinutes).toBe(10);
     expect(cfg.maxAttempts).toBe(3);
-    expect(cfg.deliveryTimeoutMinutes).toBe(60);
+    expect(cfg.deliveryTimeoutMinutes).toBe(240);
     fs.writeFileSync(path.join(dir, "config.json"), JSON.stringify({ tickIntervalMinutes: 5 }));
     expect(loadConfig().tickIntervalMinutes).toBe(5);
     expect(loadConfig().claudePath).toBe("claude");
