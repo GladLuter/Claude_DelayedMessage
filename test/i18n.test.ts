@@ -8,14 +8,18 @@ describe("i18n", () => {
   it("русский каталог", () => {
     expect(messages("ru").queueEmpty).toBe("Очередь пуста.");
   });
+  it("украинский каталог", () => {
+    expect(messages("uk").queueEmpty).toBe("Черга порожня.");
+  });
   it("неизвестный/undefined язык → английский", () => {
     expect(messages("xx").queueEmpty).toBe("Queue is empty.");
     expect(messages(undefined).queueEmpty).toBe("Queue is empty.");
   });
   it("isLang / LANGS", () => {
     expect(isLang("ru")).toBe(true);
+    expect(isLang("uk")).toBe(true);
     expect(isLang("xx")).toBe(false);
-    expect(LANGS).toEqual(["en", "ru"]);
+    expect(LANGS).toEqual(["en", "ru", "uk"]);
   });
 
   it("ntTimedOut — функция, возвращает строку с id для en и ru", () => {

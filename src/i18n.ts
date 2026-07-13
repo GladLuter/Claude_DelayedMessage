@@ -2,8 +2,8 @@
 // релиз), переключение — через config.lang (команда `cdm lang <code>`). Команды
 // хука/тика/доставки читают язык из config, поэтому строки не хардкодятся.
 
-export type Lang = "en" | "ru";
-export const LANGS: Lang[] = ["en", "ru"];
+export type Lang = "en" | "ru" | "uk";
+export const LANGS: Lang[] = ["en", "ru", "uk"];
 
 export function isLang(code: string): code is Lang {
   return (LANGS as string[]).includes(code);
@@ -182,7 +182,63 @@ const ru: Messages = {
   settingsCorrupt: (path) => `settings.json повреждён (${path}) — исправьте его вручную и повторите cdm install`,
 };
 
-const CATALOG: Record<Lang, Messages> = { en, ru };
+const uk: Messages = {
+  errorPrefix: "Помилка: ",
+  noMessageText: "немає тексту повідомлення: вкажіть -m <текст> або --message-file <шлях>",
+  noMessageTextStdin: "немає тексту повідомлення: вкажіть -m, --message-file або передайте текст через stdin",
+  sessionUndetected: (dir) => `не вдалося визначити сесію для ${dir}: вкажіть --session <id>`,
+  added: (line) => `Додано: ${line}`,
+  queueEmpty: "Черга порожня.",
+  noItem: (id) => `немає елемента ${id}`,
+  itemAlready: (id, status) => `елемент ${id} вже ${status}`,
+  updated: (line) => `Оновлено: ${line}`,
+  canceled: (id) => `Скасовано: [${id}]`,
+  logEmpty: "Журнал порожній.",
+  schedulerRegistered: (min) => `Планувальник зареєстровано (тік кожні ${min} хв).`,
+  skillInstalled: (path) => `Скіл встановлено: ${path}`,
+  hookRegistered: "Хук /delay зареєстровано (постановка в чергу без ходу моделі).",
+  uninstalled: "Планувальник знято, скіл і хук видалено. Дані в ~/.claude-delayed-message збережено.",
+  statusScheduler: (on) => `Планувальник: ${on ? "зареєстровано" : "НЕ зареєстровано"}`,
+  statusTickCli: (p) => `CLI тіка: ${p}`,
+  statusClaude: (p) => `claude: ${p}`,
+  statusTokenFresh: (d) => `Токен CLI: дійсний до ${d}`,
+  statusTokenExpired: (d) => `Токен CLI: ЗАКІНЧИВСЯ ${d} — виконайте: claude auth login`,
+  statusLastTick: (t) => `Останній тік: ${t}`,
+  statusNever: "ніколи",
+  statusProbeError: (e) => `Помилка зонда: ${e}`,
+  statusQueue: (pending, total) => `Черга: ${pending} pending / ${total} всього`,
+  langSet: (code) => `Мову переключено на ${code}.`,
+  langCurrent: (code, avail) => `Мова: ${code} (доступно: ${avail})`,
+  langUnknown: (code, avail) => `Невідома мова "${code}". Доступно: ${avail}`,
+  fmtAt: (when) => `о ${when}`,
+  fmtLimits: "після скидання лімітів",
+  fmtExpect: (when) => ` (очікуємо ~${when})`,
+  fmtFallback: " [fallback з at]",
+  fmtPerm: (mode) => `[perm: ${mode}]`,
+  hkQueueEmpty: "DelayedMessage: черга порожня.",
+  hkNoItem: (id) => `DelayedMessage: немає елемента ${id}.`,
+  hkItemAlready: (id, status) => `DelayedMessage: [${id}] вже ${status}.`,
+  hkCanceled: (id) => `DelayedMessage: скасовано [${id}].`,
+  hkUpdated: (line) => `DelayedMessage: оновлено ${line}`,
+  hkError: (msg) => `DelayedMessage: ${msg}`,
+  hkEmptyMessage: "DelayedMessage: порожнє повідомлення — нічого ставити в чергу.",
+  hkNoSession: "DelayedMessage: не вдалося визначити сесію (session_id відсутній).",
+  hkQueued: (id, cond, project) =>
+    `DelayedMessage: поставлено в чергу [${id}] ${cond} → ${project}. Скасувати: /delay cancel ${id} · Черга: /delay list`,
+  hkCondAt: (when) => `на ${when}`,
+  hkCondReset: "після скидання лімітів",
+  ntFallback: (id) => `Ліміти зайняті — ${id} піде після скидання`,
+  ntAuth: "claude CLI не автентифіковано (401): виконайте claude auth login у терміналі — черга чекає",
+  ntProbeFail: (n) => `Зонд лімітів падає (${n} тіків поспіль) — деталі: cdm status`,
+  ntDelivered: (project) => `Повідомлення доставлено: ${project}`,
+  ntFailed: (project, id) => `Доставку провалено (${project}): ${id}`,
+  ntTimedOut: (project, id) =>
+    `Доставку перервано за таймаутом (${project}): ${id} — повідомлення доставлено, завершення не підтверджено`,
+  ntDeliveryError: (id, detail) => `Помилка доставки ${id}: ${detail}`,
+  settingsCorrupt: (path) => `settings.json пошкоджено (${path}) — виправте його вручну та повторіть cdm install`,
+};
+
+const CATALOG: Record<Lang, Messages> = { en, ru, uk };
 
 /** Каталог сообщений для языка; неизвестный код откатывается к английскому. */
 export function messages(lang: string | undefined): Messages {
