@@ -13,10 +13,11 @@ First public release.
 - **Cross-platform background tick** — Windows Task Scheduler (run hidden via a `wscript` launcher, so no console window flashes or steals focus), macOS launchd, Linux systemd timer / cron.
 - **Zero-cost probing while limited**, and probe failures are never silent: `[AUTH]` detection for an expired CLI token (desktop toast pointing to `claude auth login`), a probe-error journal, and `cdm status` showing the last error plus the CLI token expiry.
 - **`cdm` CLI** — `add`, `list`, `edit`, `cancel`, `log`, `status`, `run-once`, `install`, `uninstall`, and `lang`.
-- **Internationalized output** — English by default, switchable per install with `cdm lang <code>` (English and Russian included).
+- **Internationalized output** — English by default, switchable per install with `cdm lang <code>` (English, Russian and Ukrainian included).
+- **Permission mode passthrough** — the delivered `claude --resume` run uses the permission mode captured from your chat at queue time, or an explicit `--permission-mode` / `deliveryPermissionMode`; shown as `[perm: <mode>]` in `cdm list`.
 
 ### Notes
 
 - Delivered runs use the permission mode captured from your chat at queue time (or `deliveryPermissionMode` / `--permission-mode`); with nothing set, no permission flag is added and the project's Claude Code settings apply.
-- 90 unit tests. Licensed under PolyForm Noncommercial 1.0.0 — free for noncommercial use; commercial licensing via gladluter@gmail.com.
+- 105 unit tests. Licensed under PolyForm Noncommercial 1.0.0 — free for noncommercial use; commercial licensing via gladluter@gmail.com.
 - Known: a Node `DEP0190` deprecation warning surfaces on Windows (static args under `shell: true` — safe, tracked for a future release).

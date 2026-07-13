@@ -71,12 +71,21 @@ OS scheduler (every 10 min) ──►  cdm run-once
 | `cdm cancel <id>` | Cancel a pending item |
 | `cdm log` | Delivery history |
 | `cdm status` | Scheduler state, resolved `claude` path, CLI token expiry, last tick, queue size |
-| `cdm lang [code]` | Show or set the output language (`en`, `ru`); English by default |
+| `cdm lang [code]` | Show or set the output language (`en`, `ru`, `uk`); English by default |
 | `cdm install` / `cdm uninstall` | Register/remove the scheduler, the `/delay` skill and hook |
 
 Time formats for `--at`: `09:00`, `tomorrow 9am`, `tomorrow 12:30pm`, ISO like `2026-07-08T09:00`. A bare `HH:MM` that already passed today rolls to tomorrow.
 
-Output is English by default. Run `cdm lang ru` to switch all messages, hook replies and notifications to Russian (`cdm lang en` to switch back).
+Output is English by default. Run `cdm lang ru` (Russian) or `cdm lang uk` (Ukrainian) to switch all messages, hook replies and notifications; `cdm lang en` switches back.
+
+## Permissions for the delivered run
+
+A delayed message is delivered by a headless `claude --resume`, which does **not** inherit the permission mode you had selected in the chat — so by default it can't edit files (writes are auto-denied). To let a queued run act autonomously, the permission mode is **captured from your chat** at queue time (via the `/delay` hook) and passed to delivery. You can also set it explicitly:
+
+- Per message: `cdm add … --permission-mode bypassPermissions` (choices: `default`, `acceptEdits`, `bypassPermissions`, `auto`, `dontAsk`, `plan`).
+- As a default for every delivery: add `"deliveryPermissionMode": "bypassPermissions"` to `~/.claude-delayed-message/config.json`.
+
+`cdm list` shows the mode as `[perm: <mode>]` when set, so an elevated run is never a surprise. With nothing set, no permission flag is added and your project's Claude Code settings apply. `bypassPermissions` lets the run do anything without prompting — use it only for work you'd run unattended yourself.
 
 ## FAQ
 
