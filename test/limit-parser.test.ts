@@ -31,4 +31,11 @@ describe("parseLimitOutput", () => {
   it("пустая строка -> limited:false", () => {
     expect(parseLimitOutput("").limited).toBe(false);
   });
+
+  it("429 в тексте успешного ответа (is_error:false) — НЕ лимит", () => {
+    expect(
+      parseLimitOutput('{"is_error":false,"api_error_status":429,"result":"объясняю ошибку api_error_status 429"}')
+        .limited,
+    ).toBe(false);
+  });
 });

@@ -67,6 +67,15 @@ describe("runOnce", () => {
     expect(after.fallbackFromAt).toBe(true);
   });
 
+  it("at-цикл: limited на первом элементе останавливает пачку", async () => {
+    add({ trigger: { type: "at", at: new Date(Date.now() - 2000).toISOString() } });
+    add({ trigger: { type: "at", at: new Date(Date.now() - 1000).toISOString() } });
+    const probe = vi.fn();
+    const deliver = vi.fn(async () => "limited" as const);
+    await runOnce(cfg, { probe, deliver });
+    expect(deliver).toHaveBeenCalledTimes(1);
+  });
+
   it("probe limited: expectedResetAt проставлен, доставки нет", async () => {
     const item = add();
     const resetAt = new Date(Date.now() + 3_600_000);

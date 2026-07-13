@@ -15,7 +15,7 @@ export function parseLimitOutput(output: string): LimitInfo {
   if (status === 401) return { limited: false }; // auth, обрабатывается отдельно
   const isError = /"is_error"\s*:\s*true/.test(output);
   const phrase = /hit your (?:session|usage) limit|usage limit reached|limit reached|limit · resets/i.test(output);
-  const limited = status === 429 || (isError && phrase);
+  const limited = isError && (status === 429 || phrase);
   if (!limited) return { limited: false };
   return { limited: true, resetAt: parseResetAt(output) };
 }
