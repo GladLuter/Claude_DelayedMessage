@@ -22,6 +22,12 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
     return "error";
   }
 
+  // Заявка ДО запуска: помечаем "delivering", чтобы параллельный тик (устаревший
+  // lock) не перезапустил ту же — возможно многочасовую — доставку.
+  item.status = "delivering";
+  item.claimedAt = new Date().toISOString();
+  writeItem(item);
+
   const res = await runClaude(["-p", "--resume", item.sessionId, "--output-format", "json"], {
     cwd: item.projectDir,
     input: item.message,
@@ -31,40 +37,53 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
   const out = `${res.stdout}\n${res.stderr}`;
   const project = path.basename(item.projectDir);
 
-  // Успех определяем по коду возврата ПЕРЕД проверкой лимит-фразы: ответ
-  // claude может процитировать "usage limit reached" (если сообщение было
-  // о лимитах), а настоящая ошибка лимита всегда даёт ненулевой exitCode.
+  // Лимит определяем СТРУКТУРНО (api_error_status/is_error), поэтому проверяем
+  // раньше success: настоящий 429 не спутать с успешным ответом.
+  const limit = parseLimitOutput(out);
+  if (limit.limited) {
+    if (limit.resetAt) item.expectedResetAt = limit.resetAt.toISOString();
+    item.status = "pending"; // вернуть в очередь до следующего сброса
+    item.claimedAt = undefined;
+    writeItem(item); // attempts НЕ увеличиваем — лимит не ошибка
+    appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "limited" });
+    return "limited";
+  }
+
   if (res.exitCode === 0 && !res.timedOut) {
     item.status = "sent";
     item.result = res.stdout.slice(0, 2000);
+    item.claimedAt = undefined;
     writeItem(item);
     appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "sent", project });
     notify(cfg, "DelayedMessage", m.ntDelivered(project));
     return "sent";
   }
 
-  const limit = parseLimitOutput(out);
-  if (limit.limited) {
-    if (limit.resetAt) item.expectedResetAt = limit.resetAt.toISOString();
-    writeItem(item); // attempts НЕ увеличиваем — лимит не ошибка
-    appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "limited" });
-    return "limited";
+  if (res.timedOut) {
+    // Сообщение уже впрыснуто в сессию и прогон шёл — повтор ДУБЛИРОВАЛ бы работу
+    // и жёг лимиты. Терминально, БЕЗ retry.
+    item.status = "failed";
+    item.result = `timed out after ${cfg.deliveryTimeoutMinutes} min (delivered; completion unconfirmed)`;
+    item.claimedAt = undefined;
+    writeItem(item);
+    appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "timeout", detail: item.result });
+    notify(cfg, "DelayedMessage", m.ntTimedOut(project, item.id));
+    return "error";
   }
 
+  // Прочая ошибка — retry с ограничением maxAttempts.
   item.attempts += 1;
-  const detail = (res.timedOut ? "timeout; " : "") + out.slice(0, 2000);
-  if (item.attempts >= cfg.maxAttempts) {
-    item.status = "failed";
-    item.result = detail;
-    notify(cfg, "DelayedMessage", m.ntFailed(project, item.id));
-  }
+  item.status = item.attempts >= cfg.maxAttempts ? "failed" : "pending";
+  item.claimedAt = undefined;
+  item.result = out.slice(0, 2000);
   writeItem(item);
   appendLog({
     ts: new Date().toISOString(),
     id: item.id,
     outcome: item.status === "failed" ? "failed" : "retry",
     attempt: item.attempts,
-    detail: detail.slice(0, 500),
+    detail: out.slice(0, 500),
   });
+  if (item.status === "failed") notify(cfg, "DelayedMessage", m.ntFailed(project, item.id));
   return "error";
 }

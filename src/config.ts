@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG: Config = {
   tickIntervalMinutes: 10,
   claudePath: "claude",
   maxAttempts: 3,
-  deliveryTimeoutMinutes: 60,
+  deliveryTimeoutMinutes: 240,
   notifications: true,
   lang: "en",
 };

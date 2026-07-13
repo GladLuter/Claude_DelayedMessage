@@ -105,6 +105,45 @@ describe("runOnce", () => {
     releaseLock();
   });
 
+  it("probe available: лимит в середине FIFO-пачки останавливает доставку остальных", async () => {
+    const a = add({ message: "first" });
+    const b = add({ message: "second" });
+    const probe = vi.fn(async () => ({ kind: "available" as const }));
+    const deliver = vi.fn(async (i: QueueItem) => {
+      if (i.message === "first") {
+        i.status = "pending";
+        writeItem(i);
+        return "limited" as const;
+      }
+      i.status = "sent";
+      writeItem(i);
+      return "sent" as const;
+    });
+    await runOnce(cfg, { probe, deliver });
+    expect(deliver).toHaveBeenCalledTimes(1); // второй элемент не тронут
+    expect(getItem(a.id)?.status).toBe("pending");
+    expect(getItem(b.id)?.status).toBe("pending");
+  });
+
+  it("реклейм зависших 'delivering': возвращается в pending при следующем runOnce", async () => {
+    const item = add();
+    const stale = getItem(item.id)!;
+    stale.status = "delivering";
+    stale.claimedAt = new Date(Date.now() - (cfg.deliveryTimeoutMinutes + 10) * 60_000).toISOString();
+    writeItem(stale);
+
+    const probe = vi.fn(async () => ({ kind: "available" as const }));
+    const deliver = vi.fn(async (i: QueueItem) => {
+      i.status = "sent";
+      writeItem(i);
+      return "sent" as const;
+    });
+    await runOnce(cfg, { probe, deliver });
+    // К моменту сбора waiting он уже "pending" и будет доставлен в этом же тике.
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(getItem(item.id)?.status).toBe("sent");
+  });
+
   it("исключение в доставке одного элемента не блокирует остальные", async () => {
     add({ message: "boom" });
     add({ message: "ok" });

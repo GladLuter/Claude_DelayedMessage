@@ -13,6 +13,8 @@ export interface FakeScenario {
   stdout?: string;
   stderr?: string;
   exitCode?: number;
+  /** Синхронная задержка перед ответом (мс) — для тестов реального таймаута. */
+  delayMs?: number;
 }
 
 /**
@@ -30,6 +32,7 @@ fs.appendFileSync(path.join(__dirname, "calls.txt"), JSON.stringify(process.argv
 let input = "";
 try { input = fs.readFileSync(0, "utf8"); } catch {}
 fs.appendFileSync(path.join(__dirname, "stdin.txt"), input + "\\n---\\n");
+if (s.delayMs) { const start = Date.now(); while (Date.now() - start < s.delayMs) {} }
 if (s.stdout) process.stdout.write(s.stdout);
 if (s.stderr) process.stderr.write(s.stderr);
 process.exit(s.exitCode ?? 0);

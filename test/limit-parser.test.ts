@@ -2,28 +2,33 @@ import { describe, expect, it } from "vitest";
 import { parseLimitOutput } from "../src/limit-parser.js";
 
 describe("parseLimitOutput", () => {
-  it("распознаёт лимит с unix-ts в секундах", () => {
-    const r = parseLimitOutput("Claude AI usage limit reached|1751900000");
+  it("реальный формат: is_error:true + api_error_status:429 + 'resets 5:20am' -> limited, resetAt — Date", () => {
+    const r = parseLimitOutput(
+      '{"is_error":true,"api_error_status":429,"result":"You\'ve hit your session limit · resets 5:20am (Europe/Kiev)"}',
+    );
+    expect(r.limited).toBe(true);
+    expect(r.resetAt).toBeInstanceOf(Date);
+  });
+
+  it("401 (api_error_status:401) -> limited:false (это auth, не лимит)", () => {
+    const r = parseLimitOutput(
+      '{"is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}',
+    );
+    expect(r.limited).toBe(false);
+  });
+
+  it("успешный ответ (is_error:false), цитирующий фразу про лимит, не считается лимитом", () => {
+    const r = parseLimitOutput('{"is_error":false,"result":"discussing usage limit reached error"}');
+    expect(r.limited).toBe(false);
+  });
+
+  it("старый формат unix-ts (reached|<ts>) с is_error:true -> resetAt из ts", () => {
+    const r = parseLimitOutput('{"is_error":true,"api_error_status":429,"result":"usage limit reached|1751900000"}');
     expect(r.limited).toBe(true);
     expect(r.resetAt?.getTime()).toBe(1751900000 * 1000);
   });
 
-  it("распознаёт лимит с ts в миллисекундах", () => {
-    const r = parseLimitOutput("usage limit reached|1751900000000");
-    expect(r.resetAt?.getTime()).toBe(1751900000000);
-  });
-
-  it("лимит без ts — limited, resetAt отсутствует", () => {
-    const r = parseLimitOutput('{"result":"Usage limit reached, try later"}');
-    expect(r.limited).toBe(true);
-    expect(r.resetAt).toBeUndefined();
-  });
-
-  it("обычный ответ — не лимит", () => {
-    expect(parseLimitOutput('{"type":"result","result":"ok"}').limited).toBe(false);
-  });
-
-  it("пустой ввод не роняет", () => {
+  it("пустая строка -> limited:false", () => {
     expect(parseLimitOutput("").limited).toBe(false);
   });
 });

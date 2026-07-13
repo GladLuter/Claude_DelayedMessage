@@ -33,13 +33,21 @@ describe("deliverItem", () => {
     expect(log).toContain(item.id);
   });
 
-  it("лимит: limited, attempts не растёт, expectedResetAt обновлён", async () => {
-    cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: "Claude AI usage limit reached|1751900000", exitCode: 1 }), notifications: false };
+  it("лимит: реальный 429 JSON -> limited, attempts не растёт, статус вернулся в pending, expectedResetAt проставлен", async () => {
+    cfg = {
+      ...DEFAULT_CONFIG,
+      claudePath: makeFakeClaude(dir, {
+        stdout: '{"is_error":true,"api_error_status":429,"result":"You\'ve hit your session limit · resets 5:20am (Europe/Kiev)"}',
+        exitCode: 1,
+      }),
+      notifications: false,
+    };
     expect(await deliverItem(item, cfg)).toBe("limited");
     const after = getItem(item.id)!;
-    expect(after.status).toBe("pending");
+    expect(after.status).toBe("pending"); // не "delivering" — заявка снята
     expect(after.attempts).toBe(0);
-    expect(after.expectedResetAt).toBe(new Date(1751900000000).toISOString());
+    expect(after.expectedResetAt).toBeDefined();
+    expect(after.claimedAt).toBeUndefined();
   });
 
   it("прочая ошибка трижды -> failed", async () => {
@@ -50,6 +58,35 @@ describe("deliverItem", () => {
     const after = getItem(item.id)!;
     expect(after.status).toBe("failed");
     expect(after.attempts).toBe(3);
+  });
+
+  it("таймаут: терминально failed без retry, attempts не растёт, claimedAt очищен", async () => {
+    cfg = {
+      ...DEFAULT_CONFIG,
+      claudePath: makeFakeClaude(dir, { stdout: '{"result":"done"}', delayMs: 1500 }),
+      notifications: false,
+      deliveryTimeoutMinutes: 150 / 60_000, // ~150ms
+    };
+    expect(await deliverItem(item, cfg)).toBe("error");
+    const after = getItem(item.id)!;
+    expect(after.status).toBe("failed");
+    expect(after.attempts).toBe(0); // таймаут — не retry-путь
+    expect(after.claimedAt).toBeUndefined();
+    expect(after.result).toContain("timed out");
+  }, 15000);
+
+  it("заявка перед запуском: статус синхронно становится delivering с claimedAt; успех очищает claimedAt", async () => {
+    cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: '{"result":"done"}' }), notifications: false };
+    const promise = deliverItem(item, cfg);
+    // item.status = "delivering" выставляется синхронно ДО await runClaude —
+    // проверяем это сразу после вызова, до того как промис разрешится.
+    const mid = getItem(item.id)!;
+    expect(mid.status).toBe("delivering");
+    expect(mid.claimedAt).toBeDefined();
+    await promise;
+    const after = getItem(item.id)!;
+    expect(after.status).toBe("sent");
+    expect(after.claimedAt).toBeUndefined();
   });
 
   it("невалидный sessionId -> failed без запуска claude", async () => {
