@@ -94,6 +94,7 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
     if (items.length === 0) return; // зонд при пустой очереди запрещён (спека §5.3)
 
     const now = new Date();
+    let hitLimit = false;
     for (const item of items.filter((i) => i.trigger.type === "at" && new Date(i.trigger.at!) <= now)) {
       try {
         const outcome = await deps.deliver(item, cfg);
@@ -102,12 +103,16 @@ export async function runOnce(cfg: Config, deps: TickDeps = REAL_DEPS): Promise<
           item.fallbackFromAt = true;
           writeItem(item);
           notify(cfg, "DelayedMessage", messages(cfg.lang).ntFallback(item.id));
+          hitLimit = true;
+          break; // лимиты исчерпаны — остальные due at-элементы уйдут на следующем тике
         }
       } catch (err) {
         // Сбой одного элемента не должен блокировать остальные; следующий тик повторит.
         notify(cfg, "DelayedMessage", messages(cfg.lang).ntDeliveryError(item.id, String(err)));
       }
     }
+    // Уже узнали в этом тике, что лимит исчерпан — зонд сейчас бессмыслен и жёг бы вызов зря.
+    if (hitLimit) return;
 
     const waiting = pending().filter((i) => i.trigger.type === "limits-reset");
     if (waiting.length === 0) return;

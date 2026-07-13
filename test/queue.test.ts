@@ -109,4 +109,14 @@ describe("lock", () => {
     expect(acquireLock(60_000)).toBe(true);
     releaseLock();
   });
+
+  it("releaseLock не удаляет чужой lock", () => {
+    expect(acquireLock(60_000)).toBe(true); // наш lock (token A)
+    const stolen = "other-process-token";
+    fs.writeFileSync(lockFile(), stolen); // симулируем перехват другим тиком
+    releaseLock(); // наш release не должен удалить чужой
+    expect(fs.existsSync(lockFile())).toBe(true);
+    expect(fs.readFileSync(lockFile(), "utf8")).toBe(stolen);
+    fs.unlinkSync(lockFile());
+  });
 });
