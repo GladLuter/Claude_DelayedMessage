@@ -8,6 +8,7 @@ import { readLog } from "./delivery-log.js";
 import { handleHookPayload } from "./hook.js";
 import { isLang, LANGS, messages } from "./i18n.js";
 import { lastProbeErrorFile, lastTickFile } from "./paths.js";
+import { isPermissionMode, type PermissionMode } from "./permission.js";
 import { addItem, getItem, listItems, pending, writeItem } from "./queue.js";
 import { cliEntryPath, installScheduler, schedulerInstalled, uninstallScheduler } from "./schedulers/index.js";
 import { detectSessionId } from "./session-detect.js";
@@ -50,7 +51,8 @@ function fmt(item: QueueItem): string {
       ? m.fmtAt(new Date(item.trigger.at!).toLocaleString())
       : `${m.fmtLimits}${item.expectedResetAt ? m.fmtExpect(new Date(item.expectedResetAt).toLocaleString()) : ""}${item.fallbackFromAt ? m.fmtFallback : ""}`;
   const preview = item.message.length > 60 ? `${item.message.slice(0, 60)}…` : item.message;
-  return `[${item.id}] ${item.status.padEnd(8)} ${when}  ${path.basename(item.projectDir)}  "${preview}"`;
+  const perm = item.permissionMode && item.permissionMode !== "default" ? ` ${m.fmtPerm(item.permissionMode)}` : "";
+  return `[${item.id}] ${item.status.padEnd(8)} ${when}  ${path.basename(item.projectDir)}  "${preview}"${perm}`;
 }
 
 program
@@ -65,6 +67,10 @@ program
     "auto",
   )
   .option("--project <dir>", "project directory", process.cwd())
+  .option(
+    "--permission-mode <mode>",
+    "permission mode for the delivered run (default, acceptEdits, bypassPermissions, auto, dontAsk, plan)",
+  )
   .action((opts) => {
     const projectDir = path.resolve(opts.project);
     const sessionId = opts.session === "auto" ? detectSessionId(projectDir) : opts.session;
@@ -77,7 +83,12 @@ program
         fail(String(e instanceof Error ? e.message : e));
       }
     }
-    const item = addItem({ sessionId, projectDir, message: readMessage(opts), trigger });
+    let permissionMode: PermissionMode | undefined;
+    if (opts.permissionMode !== undefined) {
+      if (!isPermissionMode(opts.permissionMode)) fail(`unknown permission mode: ${opts.permissionMode}`);
+      permissionMode = opts.permissionMode;
+    }
+    const item = addItem({ sessionId, projectDir, message: readMessage(opts), trigger, permissionMode });
     console.log(m.added(fmt(item)));
   });
 
