@@ -1,5 +1,6 @@
 import path from "node:path";
 import { messages } from "./i18n.js";
+import { isPermissionMode } from "./permission.js";
 import { addItem, getItem, listItems, writeItem } from "./queue.js";
 import { parseAt } from "./time-parser.js";
 import type { QueueItem } from "./types.js";
@@ -9,6 +10,7 @@ export interface HookPayload {
   command_args?: string;
   session_id?: string;
   cwd?: string;
+  permission_mode?: string;
 }
 
 export interface HookResult {
@@ -85,10 +87,12 @@ export function handleHookPayload(payload: HookPayload, lang: string = "en"): Ho
     return { block: true, reason: m.hkNoSession };
   }
 
-  const item = addItem({ sessionId, projectDir, message, trigger });
+  const permissionMode = isPermissionMode(payload.permission_mode) ? payload.permission_mode : undefined;
+  const item = addItem({ sessionId, projectDir, message, trigger, permissionMode });
   const cond = item.trigger.type === "at" ? m.hkCondAt(new Date(item.trigger.at!).toLocaleString()) : m.hkCondReset;
+  const permSuffix = permissionMode && permissionMode !== "default" ? ` ${m.fmtPerm(permissionMode)}` : "";
   return {
     block: true,
-    reason: m.hkQueued(item.id, cond, path.basename(projectDir)),
+    reason: m.hkQueued(item.id, cond, path.basename(projectDir) + permSuffix),
   };
 }

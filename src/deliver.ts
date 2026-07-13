@@ -4,6 +4,7 @@ import { appendLog } from "./delivery-log.js";
 import { messages } from "./i18n.js";
 import { parseLimitOutput } from "./limit-parser.js";
 import { notify } from "./notify.js";
+import { isPermissionMode } from "./permission.js";
 import { writeItem } from "./queue.js";
 import type { Config, QueueItem } from "./types.js";
 
@@ -28,7 +29,10 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
   item.claimedAt = new Date().toISOString();
   writeItem(item);
 
-  const res = await runClaude(["-p", "--resume", item.sessionId, "--output-format", "json"], {
+  const mode = item.permissionMode ?? cfg.deliveryPermissionMode;
+  const permArgs = mode && isPermissionMode(mode) && mode !== "default" ? ["--permission-mode", mode] : [];
+
+  const res = await runClaude(["-p", "--resume", item.sessionId, "--output-format", "json", ...permArgs], {
     cwd: item.projectDir,
     input: item.message,
     timeoutMs: cfg.deliveryTimeoutMinutes * 60_000,

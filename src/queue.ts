@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { ensureDirs, quarantineDir, queueDir } from "./paths.js";
+import type { PermissionMode } from "./permission.js";
 import type { QueueItem, Trigger } from "./types.js";
 
 export function itemPath(id: string): string {
@@ -21,6 +22,7 @@ export function addItem(input: {
   projectDir: string;
   message: string;
   trigger: Trigger;
+  permissionMode?: PermissionMode;
 }): QueueItem {
   const item: QueueItem = {
     id: crypto.randomUUID().replace(/-/g, "").slice(0, 8),

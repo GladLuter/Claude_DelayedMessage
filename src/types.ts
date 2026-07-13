@@ -1,4 +1,5 @@
 import type { Lang } from "./i18n.js";
+import type { PermissionMode } from "./permission.js";
 
 export type TriggerType = "limits-reset" | "at";
 
@@ -23,6 +24,7 @@ export interface QueueItem {
   fallbackFromAt?: boolean;
   claimedAt?: string;
   result?: string;
+  permissionMode?: PermissionMode;
 }
 
 export interface Config {
@@ -32,4 +34,5 @@ export interface Config {
   deliveryTimeoutMinutes: number;
   notifications: boolean;
   lang: Lang;
+  deliveryPermissionMode?: PermissionMode;
 }

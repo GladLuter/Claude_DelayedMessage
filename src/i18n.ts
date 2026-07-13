@@ -45,6 +45,7 @@ export interface Messages {
   fmtLimits: string;
   fmtExpect: (when: string) => string;
   fmtFallback: string;
+  fmtPerm: (mode: string) => string;
   // hook (ответы в чат, префикс DelayedMessage:)
   hkQueueEmpty: string;
   hkNoItem: (id: string) => string;
@@ -101,6 +102,7 @@ const en: Messages = {
   fmtLimits: "after limits reset",
   fmtExpect: (when) => ` (expected ~${when})`,
   fmtFallback: " [fell back from at]",
+  fmtPerm: (mode) => `[perm: ${mode}]`,
   hkQueueEmpty: "DelayedMessage: queue is empty.",
   hkNoItem: (id) => `DelayedMessage: no item ${id}.`,
   hkItemAlready: (id, status) => `DelayedMessage: [${id}] is already ${status}.`,
@@ -156,6 +158,7 @@ const ru: Messages = {
   fmtLimits: "после сброса лимитов",
   fmtExpect: (when) => ` (ожидаем ~${when})`,
   fmtFallback: " [fallback из at]",
+  fmtPerm: (mode) => `[perm: ${mode}]`,
   hkQueueEmpty: "DelayedMessage: очередь пуста.",
   hkNoItem: (id) => `DelayedMessage: нет элемента ${id}.`,
   hkItemAlready: (id, status) => `DelayedMessage: [${id}] уже ${status}.`,

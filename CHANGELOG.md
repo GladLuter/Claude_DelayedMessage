@@ -17,6 +17,6 @@ First public release.
 
 ### Notes
 
-- Delivered runs inherit exactly the target project's Claude Code permissions; the tool never adds permission flags.
+- Delivered runs use the permission mode captured from your chat at queue time (or `deliveryPermissionMode` / `--permission-mode`); with nothing set, no permission flag is added and the project's Claude Code settings apply.
 - 90 unit tests. Licensed under PolyForm Noncommercial 1.0.0 — free for noncommercial use; commercial licensing via gladluter@gmail.com.
 - Known: a Node `DEP0190` deprecation warning surfaces on Windows (static args under `shell: true` — safe, tracked for a future release).

@@ -104,4 +104,10 @@ describe("handleHookPayload", () => {
     expect(res.reason).toContain("could not determine the session");
     expect(listItems()).toHaveLength(0);
   });
+
+  it("захватывает permission_mode из payload в элемент", () => {
+    handleHookPayload({ command_name: "delay", command_args: "hello", session_id: sessionId, cwd: dir, permission_mode: "bypassPermissions" } as any);
+    const item = listItems().find((i) => i.message === "hello")!;
+    expect(item.permissionMode).toBe("bypassPermissions");
+  });
 });

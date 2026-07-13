@@ -102,6 +102,19 @@ describe("deliverItem", () => {
     expect(await deliverItem(item, cfg)).toBe("sent");
     expect(getItem(item.id)?.status).toBe("sent");
   });
+
+  it("передаёт --permission-mode из permissionMode элемента", async () => {
+    const it2 = addItem({ sessionId: "e8de3900-fcc5-4e11-af38-545ab0393d44", projectDir: dir, message: "x", trigger: { type: "limits-reset" }, permissionMode: "bypassPermissions" });
+    cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: '{"result":"ok"}' }), notifications: false };
+    await deliverItem(it2, cfg);
+    expect(fakeCalls(dir)[0].join(" ")).toContain("--permission-mode bypassPermissions");
+  });
+
+  it("без permissionMode флаг не добавляется", async () => {
+    cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stdout: '{"result":"ok"}' }), notifications: false };
+    await deliverItem(item, cfg);
+    expect(fakeCalls(dir)[0].join(" ")).not.toContain("--permission-mode");
+  });
 });
 
 describe("delivery-log rotation", () => {
