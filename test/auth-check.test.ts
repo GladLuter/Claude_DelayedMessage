@@ -38,6 +38,11 @@ describe("cliTokenInfo", () => {
     expect(cliTokenInfo()).toEqual({});
   });
 
+  it("expiresAt=0 (CLI не публикует срок) — пустой результат, не 'истёк 1970'", () => {
+    writeCreds(0);
+    expect(cliTokenInfo()).toEqual({});
+  });
+
   it("битый JSON/нет поля — пустой результат", () => {
     fs.writeFileSync(path.join(home, ".credentials.json"), "{broken");
     expect(cliTokenInfo()).toEqual({});

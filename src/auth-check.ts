@@ -21,7 +21,8 @@ export function cliTokenInfo(): CliTokenInfo {
       claudeAiOauth?: { expiresAt?: number };
     };
     const ms = raw.claudeAiOauth?.expiresAt;
-    if (typeof ms !== "number") return {};
+    // 0 = CLI не публикует срок (наблюдалось с 2026-08) — это «неизвестно», не «истёк в 1970».
+    if (typeof ms !== "number" || ms <= 0) return {};
     const expiresAt = new Date(ms);
     return { expiresAt, expired: expiresAt.getTime() < Date.now() };
   } catch {
