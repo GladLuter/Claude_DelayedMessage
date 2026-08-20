@@ -50,6 +50,22 @@ describe("deliverItem", () => {
     expect(after.claimedAt).toBeUndefined();
   });
 
+  it("лимит ПОСЛЕ реальной работы -> sent (не повторяем: ход уже в сессии)", async () => {
+    cfg = {
+      ...DEFAULT_CONFIG,
+      claudePath: makeFakeClaude(dir, {
+        stdout:
+          '{"is_error":true,"api_error_status":429,"num_turns":47,"total_cost_usd":18.5,"result":"You\'ve hit your session limit · resets 5:20am (Europe/Kiev)"}',
+        exitCode: 1,
+      }),
+      notifications: false,
+    };
+    expect(await deliverItem(item, cfg)).toBe("limited"); // батч стоп
+    const after = getItem(item.id)!;
+    expect(after.status).toBe("sent"); // но повтора не будет
+    expect(after.claimedAt).toBeUndefined();
+  });
+
   it("прочая ошибка трижды -> failed", async () => {
     cfg = { ...DEFAULT_CONFIG, claudePath: makeFakeClaude(dir, { stderr: "boom", exitCode: 2 }), notifications: false, maxAttempts: 3 };
     expect(await deliverItem(item, cfg)).toBe("error");

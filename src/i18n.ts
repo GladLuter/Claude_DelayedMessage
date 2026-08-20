@@ -65,6 +65,7 @@ export interface Messages {
   ntDelivered: (project: string) => string;
   ntFailed: (project: string, id: string) => string;
   ntTimedOut: (project: string, id: string) => string;
+  ntPartial: (project: string, id: string) => string;
   ntDeliveryError: (id: string, detail: string) => string;
   // settings-hook
   settingsCorrupt: (path: string) => string;
@@ -122,6 +123,8 @@ const en: Messages = {
   ntFailed: (project, id) => `Delivery failed (${project}): ${id}`,
   ntTimedOut: (project, id) =>
     `Delivery timed out (${project}): ${id} — the message was delivered, completion unconfirmed`,
+  ntPartial: (project, id) =>
+    `Usage limit hit mid-run (${project}): ${id} — partial work done, not resent (queue a follow-up if needed)`,
   ntDeliveryError: (id, detail) => `Delivery error ${id}: ${detail}`,
   settingsCorrupt: (path) => `settings.json is corrupt (${path}) — fix it manually and re-run cdm install`,
 };
@@ -178,6 +181,8 @@ const ru: Messages = {
   ntFailed: (project, id) => `Доставка провалена (${project}): ${id}`,
   ntTimedOut: (project, id) =>
     `Доставка прервана по таймауту (${project}): ${id} — сообщение доставлено, завершение не подтверждено`,
+  ntPartial: (project, id) =>
+    `Лимит исчерпан в середине прогона (${project}): ${id} — часть работы сделана, повтор НЕ выполняется (поставьте продолжение вручную)`,
   ntDeliveryError: (id, detail) => `Ошибка доставки ${id}: ${detail}`,
   settingsCorrupt: (path) => `settings.json повреждён (${path}) — исправьте его вручную и повторите cdm install`,
 };
@@ -234,6 +239,8 @@ const uk: Messages = {
   ntFailed: (project, id) => `Доставку провалено (${project}): ${id}`,
   ntTimedOut: (project, id) =>
     `Доставку перервано за таймаутом (${project}): ${id} — повідомлення доставлено, завершення не підтверджено`,
+  ntPartial: (project, id) =>
+    `Ліміт вичерпано посеред прогону (${project}): ${id} — частину роботи виконано, повтор НЕ виконується (поставте продовження вручну)`,
   ntDeliveryError: (id, detail) => `Помилка доставки ${id}: ${detail}`,
   settingsCorrupt: (path) => `settings.json пошкоджено (${path}) — виправте його вручну та повторіть cdm install`,
 };
