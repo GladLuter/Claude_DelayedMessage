@@ -13,6 +13,19 @@ export type DeliverOutcome = "sent" | "limited" | "error";
 // Только hex и дефисы: не содержит shell-метасимволов, безопасно для shell:true.
 const SESSION_ID_RE = /^[0-9a-f][0-9a-f-]{6,34}[0-9a-f]$/i;
 
+/** Число из JSON-вывода claude (0, если поля нет). */
+function num(out: string, key: string): number {
+  return Number(out.match(new RegExp(`"${key}"\\s*:\\s*([\\d.]+)`))?.[1] ?? 0);
+}
+
+/**
+ * Отличает 429 «отклонён на входе» (num_turns=1, cost=0 — работа не начиналась)
+ * от 429 «прерван в середине прогона» (были ходы/траты — сообщение уже в сессии).
+ */
+function workStarted(out: string): boolean {
+  return num(out, "total_cost_usd") > 0 || num(out, "num_turns") > 1;
+}
+
 export async function deliverItem(item: QueueItem, cfg: Config): Promise<DeliverOutcome> {
   const m = messages(cfg.lang);
   if (!SESSION_ID_RE.test(item.sessionId)) {
@@ -46,8 +59,18 @@ export async function deliverItem(item: QueueItem, cfg: Config): Promise<Deliver
   const limit = parseLimitOutput(out);
   if (limit.limited) {
     if (limit.resetAt) item.expectedResetAt = limit.resetAt.toISOString();
-    item.status = "pending"; // вернуть в очередь до следующего сброса
     item.claimedAt = undefined;
+    if (workStarted(out)) {
+      // Лимит выбил прогон В СЕРЕДИНЕ: ход уже в сессии и часть работы сделана.
+      // Повтор запустил бы её заново и сжёг следующее окно целиком.
+      item.status = "sent";
+      item.result = `interrupted by usage limit after partial work: ${out.slice(0, 500)}`;
+      writeItem(item);
+      appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "sent-partial", project });
+      notify(cfg, "DelayedMessage", m.ntPartial(project, item.id));
+      return "limited"; // батчу всё равно стоп — лимиты кончились
+    }
+    item.status = "pending"; // отклонён на входе, работа не начиналась — честный повтор
     writeItem(item); // attempts НЕ увеличиваем — лимит не ошибка
     appendLog({ ts: new Date().toISOString(), id: item.id, outcome: "limited" });
     return "limited";
