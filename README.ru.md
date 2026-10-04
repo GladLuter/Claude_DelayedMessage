@@ -6,14 +6,22 @@
 
 > [English](README.md) · Русский
 
-## Установка (2 команды)
+## Установка
+
+Пакета в npm пока нет, поэтому ставим из исходников:
 
 ```bash
-npm install -g claude-delayed-message
+git clone https://github.com/GladLuter/Claude_DelayedMessage.git
+cd Claude_DelayedMessage
+npm install
+npm run build
+npm install -g .
 cdm install
 ```
 
-`cdm install` регистрирует лёгкую фоновую проверку (Windows Task Scheduler / macOS launchd / systemd timer или cron на Linux — раз в 10 минут) и устанавливает скилл `/delay` в `~/.claude/skills/`. Также он определяет абсолютный путь к бинарнику `claude`, чтобы запланированная задача находила его даже без PATH вашей оболочки.
+`npm install -g .` кладёт команду `cdm` в PATH. Остальное делает `cdm install`: регистрирует фоновую проверку раз в 10 минут (Windows Task Scheduler, macOS launchd, systemd timer или cron на Linux), ставит скилл `/delay` в `~/.claude/skills/` и регистрирует хук, благодаря которому `/delay` кладёт сообщение в очередь без хода модели. Ещё он определяет полный путь к бинарнику `claude`, чтобы запланированная задача нашла его без PATH вашей оболочки.
+
+Папку с клоном не переносите. Запланированная задача запускает тик из неё.
 
 ## Используйте прямо из любого чата Claude Code
 

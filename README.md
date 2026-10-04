@@ -6,14 +6,22 @@ You hit your Claude usage limit at 11 PM. The limits reset at 2 AM — while you
 
 > English · [Русская версия](README.ru.md)
 
-## Install (2 commands)
+## Install
+
+The package is not on npm yet, so install from source:
 
 ```bash
-npm install -g claude-delayed-message
+git clone https://github.com/GladLuter/Claude_DelayedMessage.git
+cd Claude_DelayedMessage
+npm install
+npm run build
+npm install -g .
 cdm install
 ```
 
-`cdm install` registers a lightweight background check (Windows Task Scheduler / macOS launchd / Linux systemd timer or cron — every 10 minutes) and installs the `/delay` skill into `~/.claude/skills/`. It also resolves the absolute path to your `claude` binary so the scheduled task can find it even without your shell's PATH.
+`npm install -g .` puts the `cdm` command on your PATH. `cdm install` does the rest: it registers a background check that runs every 10 minutes (Windows Task Scheduler, macOS launchd, Linux systemd timer or cron), installs the `/delay` skill into `~/.claude/skills/`, and registers the hook that lets `/delay` queue a message without spending a model turn. It also resolves the full path to your `claude` binary, so the scheduled task finds it without your shell's PATH.
+
+Keep the cloned folder where it is. The scheduled task runs the tick from it.
 
 ## Use it from any Claude Code chat
 

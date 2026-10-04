@@ -27,5 +27,5 @@ description: Queue a message for this Claude Code session - delivered when usage
 
 ## Ошибки
 
-- `cdm` не найден → предложи `npm install -g claude-delayed-message && cdm install`.
+- `cdm` не найден → скажи, что инструмент не установлен, и дай ссылку https://github.com/GladLuter/Claude_DelayedMessage (установка из исходников описана в README).
 - Не определилась сессия → сообщи и предложи явный `--session <uuid>` (uuid виден в пикере `claude --resume`).
